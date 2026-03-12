@@ -1,7 +1,3 @@
-Great idea, Piyush 👍
-This feature makes your project **much more advanced and unique**, because now your assistant will have **AI face authentication + personalized user recognition**. I’ll combine **all features of your project** and present the **final project concept** clearly so you can explain it in class or in your report.
-
----
 
 # Final Project Overview
 
@@ -99,7 +95,3 @@ The final system integrates **face recognition, gesture detection, voice interac
 * a **portfolio project for AI internships**
 * a **GitHub showcase project**
 
----
-
-If you want, I can also help you with something **very important next**:
-I can design the **complete system architecture diagram of your project** (which teachers love in presentations).
