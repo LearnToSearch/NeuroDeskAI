@@ -1,12 +1,15 @@
 # ==========================================
 # FILE: app.py
 # FINAL STABLE VERSION
-# Continuous Mic + Safe Thread + No UI Crash
+# Hidden Start + Hey Neuro Wake Word
+# Same UI + No Blank Screen + No Attribute Error
 # ==========================================
 
 import sys
 import threading
 import time
+
+from Modules.wake_word import listen_for_wake_word
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget,
@@ -14,7 +17,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout
 )
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 
 from Modules.voice_assistant import (
     listen,
@@ -38,12 +41,6 @@ class NeuroDeskUI(QMainWindow):
 
         self.setup_ui()
 
-        # startup voice
-        threading.Thread(
-            target=self.welcome_voice,
-            daemon=True
-        ).start()
-
     # ======================================
     # UI
     # ======================================
@@ -57,10 +54,11 @@ class NeuroDeskUI(QMainWindow):
         # Left Panel
         left = QVBoxLayout()
 
-        self.status = QLabel("Idle")
+        self.status = QLabel("Sleeping...")
         self.status.setAlignment(
             Qt.AlignmentFlag.AlignCenter
         )
+
         self.status.setStyleSheet("""
             font-size:22px;
             color:#00e5ff;
@@ -89,6 +87,7 @@ class NeuroDeskUI(QMainWindow):
         # Right Panel Logs
         self.logs = QTextEdit()
         self.logs.setReadOnly(True)
+
         self.logs.setStyleSheet("""
             font-size:15px;
             background:#111;
@@ -97,14 +96,6 @@ class NeuroDeskUI(QMainWindow):
 
         layout.addLayout(left, 1)
         layout.addWidget(self.logs, 2)
-
-    # ======================================
-    # VOICE WELCOME
-    # ======================================
-    def welcome_voice(self):
-        speak(
-            "Hello Piyush sir. NeuroDesk AI is ready."
-        )
 
     # ======================================
     # SAFE LOG
@@ -125,7 +116,7 @@ class NeuroDeskUI(QMainWindow):
             pass
 
     # ======================================
-    # ENABLE MIC
+    # START MIC
     # ======================================
     def start_mic(self):
 
@@ -147,12 +138,11 @@ class NeuroDeskUI(QMainWindow):
     def stop_mic(self):
 
         self.mic_running = False
-
         self.set_status("Stopped")
         self.add_log("Mic Disabled")
 
     # ======================================
-    # CONTINUOUS MIC LOOP
+    # MIC LOOP
     # ======================================
     def mic_loop(self):
 
@@ -163,23 +153,14 @@ class NeuroDeskUI(QMainWindow):
 
                 command = listen()
 
-                # if not self.mic_running:
-                #     break
-
                 if command == "":
                     continue
 
-                self.add_log(
-                    "You: " + command
-                )
+                self.add_log("You: " + command)
 
-                self.set_status(
-                    "Processing..."
-                )
+                self.set_status("Processing...")
 
-                result = process_command(
-                    command
-                )
+                result = process_command(command)
 
                 if result is False:
                     self.mic_running = False
@@ -198,12 +179,43 @@ class NeuroDeskUI(QMainWindow):
         self.set_status("Idle")
 
     # ======================================
-    # CLOSE APP SAFE
+    # WAKE WORD MODE
+    # ======================================
+    def wake_mode(self):
+
+        self.add_log("Waiting for wake word...")
+
+        while True:
+
+            heard = listen_for_wake_word()
+
+            if heard:
+
+                # UI safely main thread me open hoga
+                QTimer.singleShot(0, self.showNormal)
+                QTimer.singleShot(0, self.raise_)
+                QTimer.singleShot(0, self.activateWindow)
+
+                QTimer.singleShot(
+                    0,
+                    lambda: self.set_status("Awakened")
+                )
+
+                speak("Yes sir")
+
+                QTimer.singleShot(
+                    0,
+                    self.start_mic
+                )
+
+                break
+
+    # ======================================
+    # CLOSE EVENT
     # ======================================
     def closeEvent(self, event):
 
         self.mic_running = False
-
         event.accept()
 
 
@@ -215,6 +227,15 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     win = NeuroDeskUI()
+
+    # First load UI properly, then hide
     win.show()
+    win.hide()
+
+    # Wake word background listener
+    threading.Thread(
+        target=win.wake_mode,
+        daemon=True
+    ).start()
 
     sys.exit(app.exec())
